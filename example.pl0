@@ -1,0 +1,10 @@
+const m=7;
+const n=85;
+var x
+var y;
+begin
+  x:=m;
+  y:=n;
+  write x;
+  write y
+end.
