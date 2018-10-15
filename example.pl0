@@ -1,10 +1,7 @@
-const m=7;
-const n=85;
-var x
-var y;
+const m=1;
+var x;
+
 begin
   x:=m;
-  y:=n;
-  write x;
-  write y
+  write x
 end.
