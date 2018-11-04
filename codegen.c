@@ -133,23 +133,18 @@ void execute() {
   display[0] = 0;
 
   do {
-  	printf("pc = %d top = %d ", pc, top);
     i = code[pc++];
     switch (i.opCode) {
       case lit:
-      	printf("lit value = %d\n", i.u.value);
         stack[top++] = i.u.value;
         break;
       case lod:
-      	printf("lod level = %d addr = %d total = %d\n", display[i.u.addr.level], i.u.addr.addr, display[i.u.addr.level] + i.u.addr.addr);
         stack[top++] = stack[display[i.u.addr.level] + i.u.addr.addr];
         break;
       case sto:
-      	printf("sto level = %d addr = %d total = %d\n", display[i.u.addr.level], i.u.addr.addr, display[i.u.addr.level] + i.u.addr.addr);
         stack[display[i.u.addr.level] + i.u.addr.addr] = stack[--top];
         break;
       case cal:
-      	printf("cal\n");
         lev = i.u.addr.level + 1;
         stack[top] = display[lev];
         stack[top+1] = pc;
@@ -157,7 +152,6 @@ void execute() {
         pc = i.u.addr.addr;
         break;
       case ret:
-          printf("ret\n");
         temp = stack[--top];
         top = display[i.u.addr.level];
         display[i.u.addr.level] = stack[top];
@@ -166,19 +160,15 @@ void execute() {
         stack[top++] = temp;
         break;
       case ict:
-      	printf("ict value = %d\n", i.u.value);
         top += i.u.value;
         break;
       case jmp:
-      	printf("jmp value = %d\n", i.u.value);
         pc = i.u.value;
         break;
       case jpc:
-		  printf("jpc\n");
         if (stack[--top] == 0) pc = i.u.value;
         break;
       case opr:
-		  printf("opr stack[top] = %d stack[top-1] = %d\n", stack[top], stack[top-1]);
       	switch(i.u.optr) {
       		case neg: stack[top-1] = -stack[top-1]; continue;
       		case add: --top;  stack[top-1] += stack[top]; continue;

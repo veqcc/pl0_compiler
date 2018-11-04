@@ -17,7 +17,7 @@ int enterTpar(char *id);
 int enterTconst(char *id, int v);
 void endFunctionParam();
 void changeV(int tableIndex, int newVal);
-int searchT(char *id, KindT k);
+int searchT(char *id);
 KindT kindT(int i);
 RelativeAddr relAddr(int tableIndex);
 int val(int tableIndex);

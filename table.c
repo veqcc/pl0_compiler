@@ -119,11 +119,10 @@ void changeV(int tableIndex, int newVal)
   nameTable[tableIndex].u.f.relativeAddr.addr = newVal;
 }
 
-int searchT(char *id, KindT k)
+int searchT(char *id)
 {
   int i;
   i = tableIndex;
-  strcpy(nameTable[0].name, id);
   while( strcmp(id, nameTable[i].name) ) i--;
   return(i);
 }

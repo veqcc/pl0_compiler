@@ -108,24 +108,24 @@ void funcDecl()
 
 void statement()
 {
-  int tIndex;
-  int backPatchIndex, backPatchIndex2;
+  int tableIndex;
+  int backPatchIfIndex, backPatchLoopExitIndex, backPatchLoopStartIndex;
 
   while(1) {
     switch(token.kind) {
       case Id:
-        tIndex = searchT(token.u.id, varId);
-        token = checkGet(nextToken(), Assign);
-        expression();
-        genCodeWithAddr(sto, tIndex);
-        return;
+          tableIndex = searchT(token.u.id);
+          token = checkGet(nextToken(), Assign);
+          expression();
+          genCodeWithAddr(sto, tableIndex);
+          return;
       case If:
         token = nextToken();
         condition();
         token = checkGet(token, Then);
-        backPatchIndex = genCodeWithValue(jpc, 0);
+        backPatchIfIndex = genCodeWithValue(jpc, 0);
         statement();
-        backPatch(backPatchIndex);
+        backPatch(backPatchIfIndex);
         return;
       case Ret:
         token = nextToken();
@@ -151,13 +151,13 @@ void statement()
         }
       case While:
         token = nextToken();
-        backPatchIndex2 = nextCode();
+        backPatchLoopStartIndex = nextCode();
         condition();
         token = checkGet(token, Do);
-        backPatchIndex = genCodeWithValue(jpc, 0);
+        backPatchLoopExitIndex = genCodeWithValue(jpc, 0);
         statement();
-        genCodeWithValue(jmp, backPatchIndex2);
-        backPatch(backPatchIndex);
+        genCodeWithValue(jmp, backPatchLoopStartIndex);
+        backPatch(backPatchLoopExitIndex);
         return;
       case Write:
         token = nextToken();
@@ -218,7 +218,7 @@ void factor()
   int tIndex, i;
   KindT k;
   if (token.kind == Id) {
-    tIndex = searchT(token.u.id, varId);
+    tIndex = searchT(token.u.id);
     k = kindT(tIndex);
     switch (k) {
       case varId: case parId:
@@ -269,7 +269,7 @@ void factor()
 void condition()
 {
   KeyId k;
-  if (token.kind == Odd){
+  if (token.kind == Odd) {
     token = nextToken();
     expression();
     genCodeOperator(odd);
@@ -285,7 +285,7 @@ void condition()
       case NotEq:	genCodeOperator(neq);  break;
       case LssEq:	genCodeOperator(lseq); break;
       case GtrEq:	genCodeOperator(greq); break;
-      default:                      break;
+      default:                             break;
     }
   }
 }

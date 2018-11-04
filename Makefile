@@ -1,7 +1,7 @@
 .PHONY: all
 
 CC = gcc
-CFLAGS := -Wall
+CFLAGS := -Wall -Wextra
 
 all: pl0d
 
