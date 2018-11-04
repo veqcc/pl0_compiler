@@ -8,8 +8,11 @@
 #define MAXNAME 31
 
 typedef  enum  keys {
-	Begin, End, Var, Const, Write, end_of_KeyWd,
-	Equal, Period, Semicolon, Assign, end_of_KeySym,
+	Begin, End, If, Then, While, Do, Ret, Func,
+	Var, Const, Odd, Write, Writeln, end_of_KeyWd,
+	Plus, Minus, Mult, Div, Lparen, Rparen,
+	Equal, Lss, Gtr, NotEq, LssEq, GtrEq,
+	Comma, Period, Semicolon, Assign, end_of_KeySym,
 	Id, Num, nul, end_of_Token,
 	letter, digit, colon, others
 } KeyId;
@@ -28,4 +31,3 @@ Token checkGet(Token t, KeyId k);
 void openSource(char fileName[]);
 void closeSource();
 void initSource();
-void finalSource();

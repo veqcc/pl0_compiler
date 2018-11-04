@@ -1,7 +1,0 @@
-const m=1;
-var x;
-
-begin
-  x:=m;
-  write x
-end.

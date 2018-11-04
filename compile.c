@@ -9,32 +9,30 @@
 #define FIRSTADDR 2
 
 static Token token;
-static void block(int pIndex);
+static void block(int nameTableIndex);
 static void constDecl();
 static void varDecl();
+static void funcDecl();
 static void statement();
 static void expression();
 static void term();
 static void factor();
+static void condition();
 static int isStBeginKey(Token t);
 
 void compile()
 {
-  printf("compile\n");
-  int i;
   initSource();
   token = nextToken();
   blockBegin(FIRSTADDR);
   block(0);
   listCode();
-  finalSource();
 }
 
-void block(int pIndex)
+void block(int nameTableIndex)
 {
-  printf("block\n");
-  int backP;
-  backP = genCodeV(jmp, 0);
+  int backPatchIndex;
+  backPatchIndex = genCodeWithValue(jmp, 0);
   while(1) {
     switch (token.kind) {
       case Const:
@@ -45,49 +43,73 @@ void block(int pIndex)
         token = nextToken();
         varDecl();
         continue;
+      case Func:
+        token = nextToken();
+        funcDecl();
+        continue;
       default:
         break;
     }
     break;
   }
-  backPatch(backP);
-  changeV(pIndex, nextCode());
-  genCodeV(ict, frameL());
+  backPatch(backPatchIndex);
+  changeV(nameTableIndex, nextCode());
+  genCodeWithValue(ict, LocalAddr());
   statement();
-  genCodeR();
+  genCodeReturn();
   blockEnd();
 }
 
 void constDecl()
 {
-  printf("constDecl\n");
-  Token tmp;
+  Token prev_token;
   while(1) {
-    tmp = token;
+    prev_token = token;
     token = checkGet(nextToken(), Equal);
-    if (token.kind == Num) enterTconst(tmp.u.id, token.u.value);
+    if (token.kind == Num) enterTconst(prev_token.u.id, token.u.value);
     token = nextToken();
-    break;
+    if (token.kind != Comma) break;
+    token = nextToken();
   }
   token = checkGet(token, Semicolon);
 }
 
 void varDecl()
 {
-  printf("varDecl\n");
   while(1) {
     enterTvar(token.u.id);
     token = nextToken();
-    break;
+    if (token.kind != Comma) break;
+    token = nextToken();
   }
+  token = checkGet(token, Semicolon);
+}
+
+void funcDecl()
+{
+  int funcIndex;
+  funcIndex = enterTfunc(token.u.id, nextCode());
+  token = checkGet(nextToken(), Lparen);
+  blockBegin(FIRSTADDR);
+
+  while (1) {
+    if (token.kind != Id) break;
+    enterTpar(token.u.id);
+    token = nextToken();
+    if (token.kind != Comma) break;
+    token = nextToken();
+  }
+
+  token = checkGet(token, Rparen);
+  endFunctionParam();
+  block(funcIndex);
   token = checkGet(token, Semicolon);
 }
 
 void statement()
 {
   int tIndex;
-  KindT k;
-  int backP, backP2;
+  int backPatchIndex, backPatchIndex2;
 
   while(1) {
     switch(token.kind) {
@@ -95,7 +117,20 @@ void statement()
         tIndex = searchT(token.u.id, varId);
         token = checkGet(nextToken(), Assign);
         expression();
-        genCodeT(sto, tIndex);
+        genCodeWithAddr(sto, tIndex);
+        return;
+      case If:
+        token = nextToken();
+        condition();
+        token = checkGet(token, Then);
+        backPatchIndex = genCodeWithValue(jpc, 0);
+        statement();
+        backPatch(backPatchIndex);
+        return;
+      case Ret:
+        token = nextToken();
+        expression();
+        genCodeReturn();
         return;
       case Begin:
         token = nextToken();
@@ -114,10 +149,26 @@ void statement()
             token = nextToken();
           }
         }
+      case While:
+        token = nextToken();
+        backPatchIndex2 = nextCode();
+        condition();
+        token = checkGet(token, Do);
+        backPatchIndex = genCodeWithValue(jpc, 0);
+        statement();
+        genCodeWithValue(jmp, backPatchIndex2);
+        backPatch(backPatchIndex);
+        return;
       case Write:
         token = nextToken();
         expression();
-        genCodeO(wrl);
+        genCodeOperator(wrt);
+        return;
+      case Writeln:
+        token = nextToken();
+        genCodeOperator(wrl);
+        return;
+      case End: case Semicolon:
         return;
       default:
         token = nextToken();
@@ -128,39 +179,122 @@ void statement()
 
 void expression()
 {
-  printf("expression\n");
-  term();
+  KeyId k;
+  k = token.kind;
+  if (k == Plus || k == Minus){
+    token = nextToken();
+    term();
+    if (k == Minus) genCodeOperator(neg);
+  } else {
+    term();
+  }
+
+  k = token.kind;
+  while (k == Plus || k == Minus){
+    token = nextToken();
+    term();
+    if (k == Minus) genCodeOperator(sub);
+    else genCodeOperator(add);
+    k = token.kind;
+  }
 }
 
 void term()
 {
-  printf("term\n");
-	factor();
+  KeyId k;
+  factor();
+  k = token.kind;
+  while (k == Mult || k == Div){
+    token = nextToken();
+    factor();
+    if (k==Mult) genCodeOperator(mul);
+    else genCodeOperator(div);
+    k = token.kind;
+  }
 }
 
 void factor()
 {
-  printf("factor\n");
-	int tIndex;
-	KindT k;
-	if (token.kind==Id){
-		tIndex = searchT(token.u.id, varId);
-		switch (k) {
-  		case varId: case parId:
-  			genCodeT(lod, tIndex);
-  			token = nextToken(); break;
-  		case constId:
-  			genCodeV(lit, val(tIndex));
-  			token = nextToken(); break;
-		}
-	}
+  int tIndex, i;
+  KindT k;
+  if (token.kind == Id) {
+    tIndex = searchT(token.u.id, varId);
+    k = kindT(tIndex);
+    switch (k) {
+      case varId: case parId:
+        genCodeWithAddr(lod, tIndex);
+        token = nextToken();
+        break;
+      case constId:
+        genCodeWithValue(lit, val(tIndex));
+        token = nextToken();
+        break;
+      case funcId:
+        token = nextToken();
+        i=0;
+        token = nextToken();
+        if (token.kind != Rparen) {
+          for (; ; ) {
+            expression();
+            i++;
+            if (token.kind == Comma) {
+              token = nextToken();
+              continue;
+            }
+            token = checkGet(token, Rparen);
+            break;
+          }
+        } else token = nextToken();
+        genCodeWithAddr(cal, tIndex);
+        break;
+      default:
+        break;
+    }
+  } else if (token.kind == Num) {
+    genCodeWithValue(lit, token.u.value);
+    token = nextToken();
+  } else if (token.kind == Lparen) {
+    token = nextToken();
+    expression();
+    token = checkGet(token, Rparen);
+  }
+  switch (token.kind){
+    case Id: case Num: case Lparen:
+      factor();
+    default:
+      return;
+  }
+}
+
+void condition()
+{
+  KeyId k;
+  if (token.kind == Odd){
+    token = nextToken();
+    expression();
+    genCodeOperator(odd);
+  } else {
+    expression();
+    k = token.kind;
+    token = nextToken();
+    expression();
+    switch (k) {
+      case Equal:	genCodeOperator(eq);   break;
+      case Lss:		genCodeOperator(ls);   break;
+      case Gtr:		genCodeOperator(gr);   break;
+      case NotEq:	genCodeOperator(neq);  break;
+      case LssEq:	genCodeOperator(lseq); break;
+      case GtrEq:	genCodeOperator(greq); break;
+      default:                      break;
+    }
+  }
 }
 
 int isStBeginKey(Token t)
 {
-  printf("isStBeginKey\n");
   switch(t.kind) {
-    case Begin: case Write: return 1;
+    case If: case Begin: case Ret: case While: case Write: case Writeln:
+      return 1;
     default: return 0;
   }
 }

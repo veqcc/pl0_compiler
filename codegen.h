@@ -6,11 +6,11 @@ typedef enum ops {
   neg, add, sub, mul, div, odd, eq, ls, gr, neq, lseq, greq, wrt, wrl
 } Operator;
 
-int genCodeV(OpCode op, int v);
-int genCodeT(OpCode op, int ti);
-int genCodeO(Operator p);
-int genCodeR();
-void backPatch(int i);
+int genCodeWithValue(OpCode op, int value);
+int genCodeWithAddr(OpCode op, int tableIndex);
+int genCodeOperator(Operator operator);
+int genCodeReturn();
+void backPatch(int index);
 int nextCode();
 void listCode();
 void execute();

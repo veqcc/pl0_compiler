@@ -16,31 +16,31 @@ typedef struct tableE {
   union {
     int value;
     struct {
-      RelAddr raddr;
-      int pars;
+        RelativeAddr relativeAddr;
+        int paramCount;
     } f;
-    RelAddr raddr;
+    RelativeAddr relativeAddr;
   } u;
 } TableE;
 
 static TableE nameTable[MAXTABLE];
 static int level = -1;
 static int localAddr;
-static int tIndex;
+static int tableIndex;
 static int lastIndex[MAXLEVEL];
 static int addr[MAXLEVEL];
+static int tableFunctionIndex;
 
 void blockBegin(int firstAddr)
 {
-  printf("blockBegin\n");
   if (level == -1) {
     localAddr = firstAddr;
-    tIndex = 0;
+    tableIndex = 0;
     level++;
     return;
   }
 
-  lastIndex[level] = tIndex;
+  lastIndex[level] = tableIndex;
   addr[level] = localAddr;
   localAddr = firstAddr;
   level++;
@@ -49,60 +49,80 @@ void blockBegin(int firstAddr)
 
 void blockEnd()
 {
-  printf("blockEnd\n");
   level--;
-  tIndex = lastIndex[level];
+  tableIndex = lastIndex[level];
   localAddr = addr[level];
 }
 
-int bLevel()
+int currentBlockLevel()
 {
-  printf("bLevel\n");
   return(level);
 }
 
-int fPars()
+int functionParamCount()
 {
-  printf("fPars\n");
-  return(nameTable[lastIndex[level-1]].u.f.pars);
+  return(nameTable[lastIndex[level-1]].u.f.paramCount);
 }
 
 void enterT(char *id)
 {
-  printf("enterT\n");
-  if (tIndex++ < MAXTABLE) strcpy(nameTable[tIndex].name, id);
+  if (tableIndex++ < MAXTABLE) strcpy(nameTable[tableIndex].name, id);
+}
+
+int enterTfunc(char *id, int v)
+{
+  enterT(id);
+  nameTable[tableIndex].kind = funcId;
+  nameTable[tableIndex].u.f.relativeAddr.level = level;
+  nameTable[tableIndex].u.f.relativeAddr.addr = v;
+  nameTable[tableIndex].u.f.paramCount = 0;
+  tableFunctionIndex = tableIndex;
+  return tableIndex;
+}
+
+int enterTpar(char *id)
+{
+  enterT(id);
+  nameTable[tableIndex].kind = parId;
+  nameTable[tableIndex].u.relativeAddr.level = level;
+  nameTable[tableFunctionIndex].u.f.paramCount++;
+  return tableIndex;
 }
 
 int enterTvar(char *id)
 {
-  printf("enterTvar\n");
   enterT(id);
-  nameTable[tIndex].kind = varId;
-  nameTable[tIndex].u.raddr.level = level;
-  nameTable[tIndex].u.raddr.addr = localAddr++;
-  return(tIndex);
+  nameTable[tableIndex].kind = varId;
+  nameTable[tableIndex].u.relativeAddr.level = level;
+  nameTable[tableIndex].u.relativeAddr.addr = localAddr++;
+  return(tableIndex);
 }
 
 int enterTconst(char *id, int v)
 {
-  printf("enterTconst\n");
   enterT(id);
-  nameTable[tIndex].kind = constId;
-  nameTable[tIndex].u.value = v;
-  return(tIndex);
+  nameTable[tableIndex].kind = constId;
+  nameTable[tableIndex].u.value = v;
+  return(tableIndex);
 }
 
-void changeV(int ti, int newVal)
+void endFunctionParam()
 {
-  printf("changeV\n");
-  nameTable[ti].u.f.raddr.addr = newVal;
+  int i;
+  int paramCount = nameTable[tableFunctionIndex].u.f.paramCount;
+  if (paramCount == 0)  return;
+  for (i=1; i<=paramCount; i++) nameTable[tableFunctionIndex+i].u.relativeAddr.addr = i-1-paramCount;
+}
+
+void changeV(int tableIndex, int newVal)
+{
+  nameTable[tableIndex].u.f.relativeAddr.addr = newVal;
 }
 
 int searchT(char *id, KindT k)
 {
-  printf("searchT\n");
   int i;
-  i = tIndex;
+  i = tableIndex;
   strcpy(nameTable[0].name, id);
   while( strcmp(id, nameTable[i].name) ) i--;
   return(i);
@@ -110,24 +130,20 @@ int searchT(char *id, KindT k)
 
 KindT kindT(int i)
 {
-  printf("KindT\n");
   return(nameTable[i].kind);
 }
 
-RelAddr relAddr(int ti)
+RelativeAddr relAddr(int tableIndex)
 {
-  printf("relAddr\n");
-  return(nameTable[ti].u.raddr);
+  return(nameTable[tableIndex].u.relativeAddr);
 }
 
-int val(int ti)
+int val(int tableIndex)
 {
-  printf("val\n");
-  return(nameTable[ti].u.value);
+  return(nameTable[tableIndex].u.value);
 }
 
-int frameL()
+int LocalAddr()
 {
-  printf("frameL\n");
   return(localAddr);
 }

@@ -1,21 +1,24 @@
 typedef enum kindT {
-  varId, parId, constId
+  varId, funcId, parId, constId
 } KindT;
 
-typedef struct relAddr {
+typedef struct relativeAddr {
   int level;
   int addr;
-} RelAddr;
+} RelativeAddr;
 
 void blockBegin(int firstAddr);
 void blockEnd();
-int bLevel();
-int fPars();
+int currentBlockLevel();
+int functionParamCount();
+int enterTfunc(char *id, int v);
 int enterTvar(char *id);
+int enterTpar(char *id);
 int enterTconst(char *id, int v);
-void changeV(int ti, int newVal);
+void endFunctionParam();
+void changeV(int tableIndex, int newVal);
 int searchT(char *id, KindT k);
 KindT kindT(int i);
-RelAddr relAddr(int ti);
-int val(int ti);
-int frameL();
+RelativeAddr relAddr(int tableIndex);
+int val(int tableIndex);
+int LocalAddr();

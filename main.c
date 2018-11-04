@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include "getSource.h"
+#include "compile.h"
+#include "codegen.h"
 
 int main()
 {
-  printf("main\n");
   char fileName[30];
-  printf("enter source file name¥n");
+  printf("enter source file name\n");
   scanf("%s", fileName);
 
   openSource(fileName);
